@@ -70,6 +70,10 @@ exports.handler = async function(event) {
   // get the documents from the query
   let sections = sectionsQuery.docs
 
+  returnValue.totalNumberReviews = 0
+
+  let ratingTotal = 0
+
   // loop through the documents
   for (let i=0; i < sections.length; i++) {
     // get the document ID of the section
@@ -94,6 +98,51 @@ exports.handler = async function(event) {
     returnValue.sections.push(sectionObject)
 
     // 🔥 your code for the reviews/ratings goes here
+    let reviewsQuery = await db.collection(`reviews`).where(`sectionId`, `==`, sectionId).get()
+
+    // create reviews variable
+    let reviews = reviewsQuery.docs
+
+    // label the "reviews"
+    sectionObject.reviews = []
+
+    // create variable for sum of section ratings
+    let sectionSumReview = 0
+
+    // add total number of reviews to course total
+    returnValue.totalNumberReviews += reviews.length
+
+    // create the loop
+    for(let k=0; k < reviews.length; k++){
+
+      // pull data in
+      let reviewData = reviews[k].data()
+
+      // create a object
+      let reviewObject = {}
+
+      // add body and rating to object
+      reviewObject.body = reviewData.body
+      reviewObject.rating = reviewData.rating
+
+      // add ratings for a sum
+      sectionSumReview += reviewObject.rating
+
+      sectionObject.reviews.push(reviewObject)
+
+      // calculate averages
+      sectionObject.sectionAverageReview = sectionSumReview/reviews.length
+
+      // calculate totals
+      sectionObject.sectionTotalReviews = reviews.length
+
+      // add total ratings to course total
+      ratingTotal += reviewObject.rating
+
+      // divide to find the average rating for course
+      returnValue.averageRating = ratingTotal/returnValue.totalNumberReviews
+    }
+    
   }
 
   // return the standard response
